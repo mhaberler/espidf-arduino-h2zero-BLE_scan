@@ -28,6 +28,7 @@
 #ifdef CONFIG_ESP_HTTPS_SERVER_ENABLE //set this to y in menuconfig to enable SSL
     #include <PsychicHttpsServer.h>
 #endif
+#include <Esp.h>
 
 #include <NimBLEDevice.h>
 int scanTime = 30 * 1000; // In milliseconds, 0 = scan forever
@@ -470,9 +471,8 @@ void loop() {
         sprintf(output, "Millis: %lu\n", millis());
         websocketHandler.sendAll(output);
 
-        sprintf(output, "%lu", millis());
+        sprintf(output, "%lu", ESP.getFreeHeap());
         eventSource.send(output, "millis", millis(), 0);
-
         lastUpdate = millis();
     }
     vTaskDelay(1 / portTICK_PERIOD_MS); // Feed WDT
