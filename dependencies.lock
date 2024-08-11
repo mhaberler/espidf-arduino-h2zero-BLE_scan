@@ -30,12 +30,6 @@ dependencies:
       service_url: https://api.components.espressif.com/
       type: service
     version: 1.0.15
-  espressif/esp-sr:
-    component_hash: 0580454068909c2854eb4572a6df137c916c5d81ad2198da938958578de9a90e
-    source:
-      service_url: https://api.components.espressif.com/
-      type: service
-    version: 1.9.0
   espressif/esp-zboss-lib:
     component_hash: b0525e1008b69b5725348a0c62d89a32a51d9b6f7799134b52dc6018e1b48b40
     source:
@@ -143,6 +137,6 @@ dependencies:
       service_url: https://api.components.espressif.com/
       type: service
     version: 1.14.8
-manifest_hash: 753ee7f83011040873ac209744eef1e84d37d50ae2b374c953c3c6f7e97f2c10
-target: esp32s3
+manifest_hash: 840960df5683d56d9fc6ae8f13368b812c6f2a293112764132d038f6ff9ef46f
+target: esp32c6
 version: 1.0.0
