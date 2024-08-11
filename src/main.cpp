@@ -71,7 +71,8 @@ const char *local_hostname = "sensorbox";
 #endif
 PsychicWebSocketHandler websocketHandler;
 PsychicEventSource eventSource;
-
+void setup_ble(void);
+void process_ble(PsychicEventSource &ev);
 bool connectToWifi() {
     //dual client and AP mode
     WiFi.mode(WIFI_STA);
@@ -460,13 +461,25 @@ void setup() {
         });
         server.on("/events", &eventSource);
     }
-    run_scanner();
+    setup_ble();
 }
 
 unsigned long lastUpdate = 0;
 char output[60];
 
 void loop() {
+    process_ble(eventSource);
+
+    if (millis() - lastUpdate > 2000) {
+
+        sprintf(output, "Millis: %lu\n", millis());
+        websocketHandler.sendAll(output);
+
+        // sprintf(output, "%lu", ESP.getFreeHeap());
+        // eventSource.send(output, "millis", millis(), 0);
+        // lastUpdate = millis();
+    }
+
     if (millis() - lastUpdate > 2000) {
         sprintf(output, "Millis: %lu\n", millis());
         websocketHandler.sendAll(output);
@@ -480,34 +493,34 @@ void loop() {
 
 
 
-class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
-    void onResult(BLEAdvertisedDevice* advertisedDevice) {
-      printf("Advertised Device: %s \n", advertisedDevice->toString().c_str());
-    }
-};
+// class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+//     void onResult(BLEAdvertisedDevice* advertisedDevice) {
+//       printf("Advertised Device: %s \n", advertisedDevice->toString().c_str());
+//     }
+// };
 
-void scanTask (void * parameter){
-    for(;;) {
-        // put your main code here, to run repeatedly:
-        BLEScanResults foundDevices = pBLEScan->getResults(scanTime, false);
-        printf("Devices found: %d\n", foundDevices.getCount());
-        printf("Scan done!\n");
-        pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
-        vTaskDelay(2000/portTICK_PERIOD_MS); // Delay a second between loops.
-    }
-    
-    vTaskDelete(NULL);
-}
+// void scanTask (void * parameter){
+//     for(;;) {
+//         // put your main code here, to run repeatedly:
+//         BLEScanResults foundDevices = pBLEScan->getResults(scanTime, false);
+//         printf("Devices found: %d\n", foundDevices.getCount());
+//         printf("Scan done!\n");
+//         pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
+//         vTaskDelay(2000/portTICK_PERIOD_MS); // Delay a second between loops.
+//     }
+
+//     vTaskDelete(NULL);
+// }
 
 
-void run_scanner(void) {
-  printf("Scanning...\n");
+// void run_scanner(void) {
+//   printf("Scanning...\n");
 
-  BLEDevice::init("");
-  pBLEScan = BLEDevice::getScan(); //create new scan
-  pBLEScan->setScanCallbacks(new MyAdvertisedDeviceCallbacks());
-  pBLEScan->setActiveScan(false); //active scan uses more power, but get results faster
-  pBLEScan->setInterval(100);
-  pBLEScan->setWindow(99);  // less or equal setInterval value
-  xTaskCreate(scanTask, "scanTask", 5000, NULL, 1, NULL);
-}
+//   BLEDevice::init("");
+//   pBLEScan = BLEDevice::getScan(); //create new scan
+//   pBLEScan->setScanCallbacks(new MyAdvertisedDeviceCallbacks());
+//   pBLEScan->setActiveScan(false); //active scan uses more power, but get results faster
+//   pBLEScan->setInterval(100);
+//   pBLEScan->setWindow(99);  // less or equal setInterval value
+//   xTaskCreate(scanTask, "scanTask", 5000, NULL, 1, NULL);
+// }
