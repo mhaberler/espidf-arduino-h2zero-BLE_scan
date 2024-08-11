@@ -162,14 +162,24 @@ void bleDeliver(JsonObject &BLEdata, PsychicEventSource &eventSource) {
         // serializeJson(BLEdata, publish);
         // publish.send();
         // sprintf(output, "%lu", ESP.getFreeHeap());
+
+
+        //make sure our client is still connected.
+        // PsychicEventSourceClient *client = eventSource.getClient(socket);
+        // if (client != NULL) {
+        //     client->send(output, "millis", millis(), 0);
+        // }
+        // client->send("Your Event")
         eventSource.send(output, "millis", millis(), 0);
         lastUpdate = millis();
 
-        log_i("pub %s", output);
+        log_d("pub %s", output);
     }
 }
 
 void process_ble(PsychicEventSource &ev) {
+    RGBLED(0,255,255);
+    RGBLED(0,0,255);
     if (!pBLEScan->isScanning()) {
 
         if ( TIME_FOR(activeScan)) {

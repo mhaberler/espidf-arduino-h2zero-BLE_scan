@@ -23,7 +23,7 @@
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <ESPmDNS.h>
-// #include "secret.h"
+#include "util.hpp"
 #include <PsychicHttp.h>
 #ifdef CONFIG_ESP_HTTPS_SERVER_ENABLE //set this to y in menuconfig to enable SSL
     #include <PsychicHttpsServer.h>
@@ -82,10 +82,9 @@ bool connectToWifi() {
     // WiFi.softAP(softap_ssid, softap_password);
     // IPAddress myIP = WiFi.softAPIP();
     // Serial.print("SoftAP IP Address: ");
-    // Serial.println(myIP);
+    // log_i(myIP);
 
-    Serial.println();
-    Serial.printf("[WiFi] Connecting to %s %s\n", ssid, password);
+    log_i("[WiFi] Connecting to %s %s\n", ssid, password);
 
     WiFi.begin(ssid, password);
     // Auto reconnect is set true as default
@@ -100,36 +99,33 @@ bool connectToWifi() {
     while (true) {
         switch (WiFi.status()) {
             case WL_NO_SSID_AVAIL:
-                Serial.println("[WiFi] SSID not found");
+                log_i("[WiFi] SSID not found");
                 break;
             case WL_CONNECT_FAILED:
                 Serial.print("[WiFi] Failed - WiFi not connected! Reason: ");
                 return false;
                 break;
             case WL_CONNECTION_LOST:
-                Serial.println("[WiFi] Connection was lost");
+                log_i("[WiFi] Connection was lost");
                 break;
             case WL_SCAN_COMPLETED:
-                Serial.println("[WiFi] Scan is completed");
+                log_i("[WiFi] Scan is completed");
                 break;
             case WL_DISCONNECTED:
-                Serial.println("[WiFi] WiFi is disconnected");
+                log_i("[WiFi] WiFi is disconnected");
                 break;
             case WL_CONNECTED:
-                Serial.println("[WiFi] WiFi is connected!");
-                Serial.print("[WiFi] IP address: ");
-                Serial.println(WiFi.localIP());
+                log_i("[WiFi] WiFi is connected");
                 return true;
                 break;
             default:
-                Serial.print("[WiFi] WiFi Status: ");
-                Serial.println(WiFi.status());
+                log_i("[WiFi] WiFi Status: %d", WiFi.status());
                 break;
         }
         delay(tryDelay);
 
         if (numberOfTries <= 0) {
-            Serial.print("[WiFi] Failed to connect to WiFi!");
+            log_e("[WiFi] Failed to connect to WiFi!");
             // Use disconnect function to force stop trying to connect
             WiFi.disconnect();
             return false;
@@ -142,22 +138,28 @@ bool connectToWifi() {
 }
 
 void setup() {
-    Serial.begin(115200);
-    delay(10);
 
+    RGBLED(255,0,0);
+
+    Serial.begin(115200);
+    delay(1000);
+
+    RGBLED(255,255,0);
     // We start by connecting to a WiFi network
     // To debug, please enable Core Debug Level to Verbose
     if (connectToWifi()) {
+        RGBLED(0,255,0);
+
         //set up our esp32 to listen on the local_hostname.local domain
         if (!MDNS.begin(local_hostname)) {
-            Serial.println("Error starting mDNS");
+            log_i("Error starting mDNS");
             return;
         }
         MDNS.addService("http", "tcp", 80);
         MDNS.addService("https", "tcp", 443);
 
         if(!LittleFS.begin()) {
-            Serial.println("LittleFS Mount Failed. Do Platform -> Build Filesystem Image and Platform -> Upload Filesystem Image from VSCode");
+            log_e("LittleFS Mount Failed. Do Platform -> Build Filesystem Image and Platform -> Upload Filesystem Image from VSCode");
             return;
         }
 
@@ -168,10 +170,10 @@ void setup() {
             if (fp) {
                 server_cert = fp.readString();
 
-                // Serial.println("Server Cert:");
-                // Serial.println(server_cert);
+                // log_i("Server Cert:");
+                // log_i(server_cert);
             } else {
-                Serial.println("server.pem not found, SSL not available");
+                log_i("server.pem not found, SSL not available");
                 app_enable_ssl = false;
             }
             fp.close();
@@ -180,10 +182,10 @@ void setup() {
             if (fp2) {
                 server_key = fp2.readString();
 
-                // Serial.println("Server Key:");
-                // Serial.println(server_key);
+                // log_i("Server Key:");
+                // log_i(server_key);
             } else {
-                Serial.println("server.key not found, SSL not available");
+                log_i("server.key not found, SSL not available");
                 app_enable_ssl = false;
             }
             fp2.close();
@@ -213,6 +215,7 @@ void setup() {
 #else
         server.listen(80);
 #endif
+        RGBLED(0,0,255);
 
         //serve static files from LittleFS/www on / only to clients on same wifi network
         //this is where our /index.html file lives
@@ -231,12 +234,12 @@ void setup() {
 
         //example callback everytime a connection is opened
         server.onOpen([](PsychicClient *client) {
-            Serial.printf("[http] connection #%u connected from %s\n", client->socket(), client->localIP().toString().c_str());
+            log_i("[http] connection #%u connected from %s", client->socket(), client->localIP().toString().c_str());
         });
 
         //example callback everytime a connection is closed
         server.onClose([](PsychicClient *client) {
-            Serial.printf("[http] connection #%u closed from %s\n", client->socket(), client->localIP().toString().c_str());
+            log_i("[http] connection #%u closed from %s", client->socket(), client->localIP().toString().c_str());
         });
 
         //api - json message passed in as post body
@@ -354,10 +357,10 @@ void setup() {
             File file;
             String path = "/www/" + filename;
 
-            Serial.printf("Writing %d/%d bytes to: %s\n", (int)index+(int)len, request->contentLength(), path.c_str());
+            log_i("Writing %d/%d bytes to: %s", (int)index+(int)len, request->contentLength(), path.c_str());
 
             if (last)
-                Serial.printf("%s is finished. Total bytes: %d\n", path.c_str(), (int)index+(int)len);
+                log_i("%s is finished. Total bytes: %d", path.c_str(), (int)index+(int)len);
 
             //our first call?
             if (!index)
@@ -366,12 +369,12 @@ void setup() {
                 file = LittleFS.open(path, FILE_APPEND);
 
             if(!file) {
-                Serial.println("Failed to open file");
+                log_i("Failed to open file");
                 return ESP_FAIL;
             }
 
             if(!file.write(data, len)) {
-                Serial.println("Write failed");
+                log_i("Write failed");
                 return ESP_FAIL;
             }
 
@@ -396,9 +399,9 @@ void setup() {
             String path = "/www/" + filename;
 
             //some progress over serial.
-            Serial.printf("Writing %d bytes to: %s\n", (int)len, path.c_str());
+            log_i("Writing %d bytes to: %s", (int)len, path.c_str());
             if (last)
-                Serial.printf("%s is finished. Total bytes: %d\n", path.c_str(), (int)index+(int)len);
+                log_i("%s is finished. Total bytes: %d", path.c_str(), (int)index+(int)len);
 
             //our first call?
             if (!index)
@@ -407,12 +410,12 @@ void setup() {
                 file = LittleFS.open(path, FILE_APPEND);
 
             if(!file) {
-                Serial.println("Failed to open file");
+                log_i("Failed to open file");
                 return ESP_FAIL;
             }
 
             if(!file.write(data, len)) {
-                Serial.println("Write failed");
+                log_i("Write failed");
                 return ESP_FAIL;
             }
 
@@ -439,25 +442,25 @@ void setup() {
 
         //a websocket echo server
         websocketHandler.onOpen([](PsychicWebSocketClient *client) {
-            Serial.printf("[socket] connection #%u connected from %s\n", client->socket(), client->localIP().toString().c_str());
+            log_i("[socket] connection #%u connected from %s", client->socket(), client->localIP().toString().c_str());
             client->sendMessage("Hello!");
         });
         websocketHandler.onFrame([](PsychicWebSocketRequest *request, httpd_ws_frame *frame) {
-            Serial.printf("[socket] #%d sent: %s\n", request->client()->socket(), (char *)frame->payload);
+            log_i("[socket] #%d sent: %s", request->client()->socket(), (char *)frame->payload);
             return request->reply(frame);
         });
         websocketHandler.onClose([](PsychicWebSocketClient *client) {
-            Serial.printf("[socket] connection #%u closed from %s\n", client->socket(), client->localIP().toString().c_str());
+            log_i("[socket] connection #%u closed from %s", client->socket(), client->localIP().toString().c_str());
         });
         server.on("/ws", &websocketHandler);
 
         //EventSource server
         eventSource.onOpen([](PsychicEventSourceClient *client) {
-            Serial.printf("[eventsource] connection #%u connected from %s\n", client->socket(), client->localIP().toString().c_str());
+            log_i("[eventsource] connection #%u connected from %s", client->socket(), client->localIP().toString().c_str());
             client->send("Hello user!", NULL, millis(), 1000);
         });
         eventSource.onClose([](PsychicEventSourceClient *client) {
-            Serial.printf("[eventsource] connection #%u closed from %s\n", client->socket(), client->localIP().toString().c_str());
+            log_i("[eventsource] connection #%u closed from %s", client->socket(), client->localIP().toString().c_str());
         });
         server.on("/events", &eventSource);
     }
@@ -471,7 +474,6 @@ void loop() {
     process_ble(eventSource);
 
     if (millis() - lastUpdate > 2000) {
-
         sprintf(output, "Millis: %lu\n", millis());
         websocketHandler.sendAll(output);
 
@@ -481,11 +483,11 @@ void loop() {
     }
 
     if (millis() - lastUpdate > 2000) {
-        sprintf(output, "Millis: %lu\n", millis());
+        sprintf(output, "freeheap: %lu\n", ESP.getFreeHeap());
         websocketHandler.sendAll(output);
 
         sprintf(output, "%lu", ESP.getFreeHeap());
-        eventSource.send(output, "millis", millis(), 0);
+        eventSource.send(output, "freeheap", millis(), 0);
         lastUpdate = millis();
     }
     vTaskDelay(1 / portTICK_PERIOD_MS); // Feed WDT

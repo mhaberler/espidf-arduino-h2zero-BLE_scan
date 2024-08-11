@@ -9,3 +9,8 @@
 #define round6(x) (round((x)*1.0e6) / 1.0e6)
 
 uint8_t volt2percent(const float volt);
+#ifdef BUILTIN_RGBLED_PIN
+    #define RGBLED(red, green, blue) neopixelWrite(BUILTIN_RGBLED_PIN, red, green, blue)
+#else
+    #define RGBLED(red, green, blue)
+#endif
